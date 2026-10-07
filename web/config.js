@@ -4,5 +4,5 @@
  * Se ficar vazia, o app pede a URL na primeira vez que for aberto.
  */
 window.FINANCAS_CONFIG = {
-  apiUrl: ''
+  apiUrl: 'https://ezequiaslucas6-rgb.github.io/Painel-Financeiro'
 };
