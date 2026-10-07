@@ -5,5 +5,5 @@
  * Se ficar vazia, o app pede a URL na primeira vez que for aberto.
  */
 window.FINANCAS_CONFIG = {
-  apiUrl: ''
+  apiUrl: 'https://script.google.com/macros/s/AKfycbz79gYrQFx3l8HT7NncKD_JncrlbSxK345XiZOJn8CQp7hYJMAgh6wGequj2Ueh0ZvEmQ/exec'
 };
