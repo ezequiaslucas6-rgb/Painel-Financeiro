@@ -22,6 +22,132 @@ const MAX_TENTATIVAS = 8;      // PIN errado: bloqueia o usuário por 15 min
 const BLOQUEIO_SEG = 900;
 const VERSAO_API = 2;
 
+/* ---------------- primeira configuração (rodar no editor) ---------------- */
+
+/**
+ * Planilha usada pelo app: a planilha onde o script foi criado (Extensões > Apps Script)
+ * ou, se o script foi criado avulso em script.google.com, a criada por montarPlanilha().
+ */
+function planilha_() {
+  const ativa = SpreadsheetApp.getActiveSpreadsheet();
+  if (ativa) return ativa;
+  const id = PropertiesService.getScriptProperties().getProperty('PLANILHA_ID');
+  if (id) return SpreadsheetApp.openById(id);
+  throw new Error('Nenhuma planilha ligada ao script. No editor do Apps Script, rode a função montarPlanilha.');
+}
+
+/**
+ * PASSO 1 — Selecione "montarPlanilha" no topo do editor e clique em Executar.
+ * Se o script estiver dentro de uma planilha, usa essa planilha; se não, cria
+ * uma planilha nova "Painel Financeiro" no seu Google Drive. Cria a aba com o
+ * layout que o app espera, sem mexer em uma aba que já exista.
+ * O link da planilha aparece no "Registro de execução".
+ */
+function montarPlanilha() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  const props = PropertiesService.getScriptProperties();
+  if (!ss && props.getProperty('PLANILHA_ID')) ss = SpreadsheetApp.openById(props.getProperty('PLANILHA_ID'));
+  if (!ss) {
+    ss = SpreadsheetApp.create('Painel Financeiro');
+    props.setProperty('PLANILHA_ID', ss.getId());
+  }
+  ss.setSpreadsheetTimeZone('America/Sao_Paulo');
+  let s = ss.getSheetByName(ABA);
+  if (s) {
+    Logger.log('A aba "' + ABA + '" já existe e não foi alterada. Planilha: ' + ss.getUrl());
+    return ss.getUrl();
+  }
+  s = ss.insertSheet(ABA, 0);
+  const ultima = ULTIMA_LINHA_FORMULAS;
+  if (s.getMaxRows() < ultima) s.insertRowsAfter(s.getMaxRows(), ultima - s.getMaxRows());
+  if (s.getMaxColumns() < 13) s.insertColumnsAfter(s.getMaxColumns(), 13 - s.getMaxColumns());
+
+  s.getRange('A1').setValue('Painel Financeiro').setFontSize(16).setFontWeight('bold');
+  s.getRange('A2').setValue('Lançamentos feitos pelo app Minhas Finanças (ou à mão, a partir da linha 5).').setFontColor('#62716B');
+  s.getRange(PRIMEIRA_LINHA - 1, 1, 1, 8)
+    .setValues([['Data', 'Descrição', 'Categoria', 'Subcategoria', 'Tipo', 'Valor', 'Mês', 'Dia']]);
+  s.getRange(PRIMEIRA_LINHA - 1, COL_QUEM).setValue('Quem');
+
+  const n = ultima - PRIMEIRA_LINHA + 1, formulas = [];
+  for (let r = PRIMEIRA_LINHA; r <= ultima; r++) {
+    formulas.push(['=IF(A' + r + '="","",TEXT(A' + r + ',"MM/YYYY"))', '=IF(A' + r + '="","",DAY(A' + r + '))']);
+  }
+  s.getRange(PRIMEIRA_LINHA, 7, n, 2).setFormulas(formulas);
+  s.getRange(PRIMEIRA_LINHA, 1, n, 1).setNumberFormat('dd/mm/yyyy');
+  s.getRange(PRIMEIRA_LINHA, 6, n, 1).setNumberFormat('#,##0.00');
+
+  const guia = [
+    ['Moradia', 'Necessidade', 'Aluguel, Condomínio, IPTU'],
+    ['Contas', 'Necessidade', 'Água, Luz, Internet, Celular'],
+    ['Mercado', 'Necessidade', 'Supermercado, Feira, Açougue'],
+    ['Transporte', 'Necessidade', 'Combustível, Ônibus, App de transporte'],
+    ['Saúde', 'Necessidade', 'Plano de saúde, Farmácia, Consultas'],
+    ['Educação', 'Necessidade', 'Mensalidade, Cursos, Material'],
+    ['Animais', 'Necessidade', 'Ração, Veterinário, Pet shop'],
+    ['Lazer', 'Desejo', 'Cinema, Streaming, Passeios'],
+    ['Restaurante', 'Desejo', 'Delivery, Bar, Café'],
+    ['Compras', 'Desejo', 'Roupas, Eletrônicos, Presentes'],
+    ['Assinaturas', 'Desejo', 'Apps, Clubes, Serviços recorrentes'],
+    ['Poupança', 'Poupança/Dívida', 'Reserva de emergência, Objetivo'],
+    ['Investimento', 'Poupança/Dívida', 'Renda fixa, Ações, Fundos'],
+    ['Dívidas', 'Poupança/Dívida', 'Cartão, Empréstimo, Financiamento'],
+    ['Outros', '-', 'Gastos não classificados']
+  ];
+  s.getRange('J4:L4').setValues([['Categoria', 'Tipo', 'Exemplos']]);
+  s.getRange('J5:L19').setValues(guia);
+  s.getRange('J26').setValue('Renda mensal');
+  s.getRange('K26').setValue(0).setNumberFormat('#,##0.00');
+  s.getRange('L28:M28').setValues([['Regra 50-30-20', 'Meta']]);
+  s.getRange('L29:M31').setValues([['Necessidade', 0.5], ['Desejo', 0.3], ['Poupança/Dívida', 0.2]]);
+  s.getRange('M29:M31').setNumberFormat('0%');
+
+  s.getRange(PRIMEIRA_LINHA, 3, n, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(guia.map(function (g) { return g[0]; }), true).setAllowInvalid(true).build());
+  s.getRange(PRIMEIRA_LINHA, 5, n, 1).setDataValidation(SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Necessidade', 'Desejo', 'Poupança/Dívida'], true).setAllowInvalid(true).build());
+
+  [s.getRange(PRIMEIRA_LINHA - 1, 1, 1, COL_QUEM), s.getRange('J4:L4'), s.getRange('L28:M28')]
+    .forEach(function (r) { r.setFontWeight('bold').setBackground('#E3EAE6'); });
+  s.setFrozenRows(PRIMEIRA_LINHA - 1);
+  s.setColumnWidth(2, 220);
+  s.setColumnWidth(12, 260);
+
+  Logger.log('Planilha pronta: ' + ss.getUrl());
+  return ss.getUrl();
+}
+
+/**
+ * PASSO 2 — Escreva os PINs abaixo (4 a 8 números), selecione "configurarPinsNoEditor"
+ * e clique em Executar. Depois APAGUE os PINs daqui e salve.
+ * (Se o script estiver dentro da planilha, dá para usar o menu 💰 Minhas Finanças.)
+ */
+function configurarPinsNoEditor() {
+  const PINS = {
+    'Eu': '',
+    'Esposa': ''
+  };
+  const NOMES = {          // opcional: como cada um aparece no app
+    'Eu': '',
+    'Esposa': ''
+  };
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('SEGREDO')) props.setProperty('SEGREDO', Utilities.getUuid() + Utilities.getUuid());
+  const s = aba_();
+  verificarColunaQuem_(s);
+  USUARIOS.forEach(function (u) {
+    const pin = String(PINS[u.id] || '').trim(), nome = String(NOMES[u.id] || '').trim();
+    if (nome) props.setProperty('NOME_' + u.id, nome.slice(0, 30));
+    if (!pin) { Logger.log(u.id + ': PIN em branco, mantido como estava.'); return; }
+    if (!/^\d{4,8}$/.test(pin)) throw new Error('O PIN de ' + u.id + ' precisa ter de 4 a 8 números.');
+    props.setProperty('PIN_' + u.id, hashPin_(pin));
+    CacheService.getScriptCache().remove('falhas:' + u.id);
+    Logger.log(u.id + ' (' + nomeDe_(u.id) + '): PIN salvo.');
+  });
+  const cab = s.getRange(PRIMEIRA_LINHA - 1, COL_QUEM);
+  if (!cab.getValue()) cab.setValue('Quem');
+  Logger.log('Pronto. Agora apague os PINs do código e salve.');
+}
+
 /* ---------------- menu da planilha ---------------- */
 
 function onOpen() {
@@ -78,7 +204,7 @@ function verificarPlanilha() {
     const semAutor = d.lancamentos.filter(function (l) { return !l.quem; }).length;
     ui.alert('Tudo certo.\n\n' + d.lancamentos.length + ' lançamentos lidos, ' +
       semAutor + ' sem autor (feitos antes do app ou direto na planilha).\n' +
-      'Fuso da planilha: ' + SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone());
+      'Fuso da planilha: ' + planilha_().getSpreadsheetTimeZone());
   } catch (e) {
     ui.alert('Problema: ' + e.message);
   }
@@ -186,13 +312,13 @@ function autenticar_(token) {
 /* ---------------- planilha ---------------- */
 
 function aba_() {
-  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABA);
-  if (!s) throw new Error('Não encontrei a aba "' + ABA + '".');
+  const s = planilha_().getSheetByName(ABA);
+  if (!s) throw new Error('Não encontrei a aba "' + ABA + '". No editor do Apps Script, rode a função montarPlanilha.');
   return s;
 }
 
 function fuso_() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  return planilha_().getSpreadsheetTimeZone();
 }
 
 function verificarColunaQuem_(s) {
@@ -244,7 +370,7 @@ function numero_(v) {
 }
 
 function carregarDados_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = planilha_();
   const s = aba_(), tz = ss.getSpreadsheetTimeZone();
   const ultima = Math.max(s.getLastRow(), ULTIMA_LINHA_FORMULAS);
   const linhas = s.getRange(PRIMEIRA_LINHA, 1, ultima - PRIMEIRA_LINHA + 1, Math.max(6, COL_QUEM)).getValues();

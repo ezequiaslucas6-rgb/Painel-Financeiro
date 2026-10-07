@@ -21,15 +21,21 @@ Seu celular ──┘                         └─ coluna I = "Quem"
 
 ## 1. Planilha e Apps Script (uma vez)
 
-1. Abra a planilha → **Extensões → Apps Script**.
-2. Substitua todo o conteúdo do `Código.gs` pelo arquivo [`apps-script/Codigo.gs`](apps-script/Codigo.gs). Apague o arquivo `app.html` antigo (o app agora mora no GitHub).
-3. Em **Configurações do projeto** (engrenagem), marque *"Mostrar arquivo de manifesto appsscript.json"* e cole o conteúdo de [`apps-script/appsscript.json`](apps-script/appsscript.json) (deixa o fuso em `America/Sao_Paulo`).
-4. **Coluna "Quem"**: por padrão o script grava quem lançou na **coluna I**. Se a coluna I da aba já tiver outra coisa, mude `COL_QUEM` no topo do `Codigo.gs` para o número de uma coluna livre (ex.: `14` = N). O menu *Verificar planilha* avisa se houver conflito.
-5. Volte à planilha, recarregue a página e use **💰 Minhas Finanças → Configurar app (nomes e PINs)**. Defina o nome que aparece para "Eu" e "Esposa" e um PIN de 4 a 8 números para cada um.
-6. No Apps Script: **Implantar → Nova implantação → tipo "App da Web"**
+Os dados ficam numa planilha do Google Sheets com a aba **Painel Financeiro**. O script cuida disso para você:
+
+1. Abra o seu projeto do Apps Script (em [script.google.com](https://script.google.com), ou na planilha em **Extensões → Apps Script**).
+2. Substitua todo o conteúdo do `Código.gs` pelo arquivo [`apps-script/Codigo.gs`](apps-script/Codigo.gs) e salve (ícone de disquete). Se houver um arquivo `app.html` antigo, pode apagar.
+3. **Montar a planilha:** no topo do editor, escolha a função **`montarPlanilha`** e clique em **Executar** (autorize na primeira vez).
+   - Se o script está dentro de uma planilha, ele usa essa planilha.
+   - Se o script é avulso, ele **cria uma planilha nova "Painel Financeiro" no seu Google Drive**.
+   - O link da planilha aparece no **Registro de execução**, embaixo. Se a aba já existir, nada é alterado.
+4. **Criar os PINs:** procure a função `configurarPinsNoEditor` no código, escreva um PIN (4 a 8 números) para `'Eu'` e para `'Esposa'` (e, se quiser, os nomes em `NOMES`), salve, escolha **`configurarPinsNoEditor`** e clique em **Executar**. **Depois apague os PINs do código e salve de novo.**
+   - Se o script está dentro da planilha, dá também para usar o menu **💰 Minhas Finanças → Configurar app** na própria planilha.
+5. **Coluna "Quem"**: o script grava quem lançou na **coluna I**. Se a coluna I da sua aba já tiver outro uso, mude `COL_QUEM` no topo do `Codigo.gs` para uma coluna livre (ex.: `14` = N).
+6. **Implantar:** **Implantar → Nova implantação → tipo "App da Web"**
    - Executar como: **Eu**
    - Quem pode acessar: **Qualquer pessoa**
-   - Autorize e **copie a URL que termina em `/exec`**.
+   - Copie a URL que termina em `/exec`.
 
 > Quando alterar o `Codigo.gs` depois, use **Implantar → Gerenciar implantações → editar (lápis) → Versão: nova versão**. Assim a URL continua a mesma.
 
