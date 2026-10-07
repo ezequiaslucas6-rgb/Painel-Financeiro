@@ -1,6 +1,6 @@
 /* Guarda os arquivos do app para abrir rápido e funcionar sem internet.
    Os dados da planilha nunca passam por aqui (vão direto ao Apps Script). */
-const CACHE = 'mf-v2.0.0';
+const CACHE = 'mf-v2.0.1';
 const ARQUIVOS = ['./', 'index.html', 'app.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

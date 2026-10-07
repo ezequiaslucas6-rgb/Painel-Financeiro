@@ -2,7 +2,9 @@
 'use strict';
 const VERSAO='2.0.0';
 const SYNC_MS=30000;
-const CFG=window.FINANCAS_CONFIG||{};
+const API_RE=/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec$/;
+const CFG=Object.assign({},window.FINANCAS_CONFIG);
+if(CFG.apiUrl&&!API_RE.test(CFG.apiUrl)){console.warn('config.js: apiUrl precisa ser a URL /exec do Apps Script');CFG.apiUrl='';}
 const $=s=>document.querySelector(s);
 const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const brl0=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
@@ -236,7 +238,7 @@ function telaServidor(){
   $('#g-demo').onclick=()=>{S.api='demo';LS.set('api','demo');S.me={id:'Eu',nome:'Eu'};S.token='demo';LS.set('me',JSON.stringify(S.me));LS.set('token','demo');iniciar();};
   $('#g-ok').onclick=async()=>{
     const u=$('#g-api').value.trim();
-    if(!/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec$/.test(u)){$('#g-err').textContent='O endereço precisa começar com https://script.google.com/ e terminar com /exec.';return;}
+    if(!API_RE.test(u)){$('#g-err').textContent='O endereço precisa começar com https://script.google.com/ e terminar com /exec.';return;}
     const b=$('#g-ok');b.disabled=true;b.textContent='Testando…';
     S.api=u;
     try{const info=await api('ping');if(!info||!info.usuarios)throw new Error('Esse endereço não é do Minhas Finanças.');LS.set('api',u);telaLogin(info);}
