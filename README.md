@@ -42,7 +42,8 @@ Edite [`web/config.js`](web/config.js) e cole a URL em `apiUrl`. Assim os dois c
 
 ## 3. GitHub Pages
 
-1. No GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+1. No GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions** (não use "Deploy from a branch").
+   - Se ficar em "Deploy from a branch", o `index.html` da raiz redireciona para `/web/` e o app abre em `https://ezequiaslucas6-rgb.github.io/Painel-Financeiro/web/`.
 2. Faça um push (ou **Actions → Publicar no GitHub Pages → Run workflow**).
 3. O site fica em `https://ezequiaslucas6-rgb.github.io/Painel-Financeiro/`.
 
